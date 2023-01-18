@@ -1,0 +1,16 @@
+[package]
+name = "syntesuite"
+version = "0.1.0"
+edition = "2021"
+authors = ["Franklin Delehelle <delehelle@ens.fr>"]
+license = "CECILL-C"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[package.metadata.release]
+tag-prefix = ""
+publish = false
+pre-release-hook = ["git-cliff", "-o", "CHANGELOG.md", "--tag", "{{version}}"]
+allow-branch = ["master"]
