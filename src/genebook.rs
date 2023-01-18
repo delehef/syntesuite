@@ -10,7 +10,7 @@ use crate::errors;
 pub enum GeneBook {
     InMemory(HashMap<String, Gene>),
     Cached(HashMap<String, Gene>),
-    Inline(Mutex<Connection>, usize),
+    Inline(Mutex<Connection>, usize, String),
 }
 
 #[derive(Clone, Default)]
@@ -74,22 +74,27 @@ impl GeneBook {
             .collect())
     }
 
-    pub fn in_memory(filename: &str, window: usize) -> Result<Self> {
+    pub fn in_memory(filename: &str, window: usize, id_column: &str) -> Result<Self> {
         info!("Caching the database...");
 
         let conn = Connection::open(filename).map_err(|e| errors::DataError::FailedToConnect {
             source: e,
             filename: filename.into(),
         })?;
-        let query = conn.prepare(
-            "SELECT id, left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes",
-        )?;
+        let query = conn.prepare(&format!(
+            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes"
+        ))?;
         let r = Self::get_rows(query, [], window)?;
         info!("Done.");
         Ok(GeneBook::InMemory(r))
     }
 
-    pub fn cached<S: AsRef<str>>(filename: &str, window: usize, ids: &[S]) -> Result<Self> {
+    pub fn cached<S: AsRef<str>>(
+        filename: &str,
+        window: usize,
+        id_column: &str,
+        ids: &[S],
+    ) -> Result<Self> {
         info!("Caching the database...");
 
         let conn = Connection::open(filename).map_err(|e| errors::DataError::FailedToConnect {
@@ -98,7 +103,7 @@ impl GeneBook {
         })?;
 
         let query = conn.prepare(&format!(
-            "SELECT id, left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes WHERE id IN ({})",
+            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes WHERE {id_column} IN ({})",
             std::iter::repeat("?").take(ids.len()).collect::<Vec<_>>().join(", ")
         ))?;
         let r = Self::get_rows(
@@ -111,12 +116,16 @@ impl GeneBook {
     }
 
     #[allow(dead_code)]
-    pub fn inline(filename: &str, window: usize) -> Result<Self> {
+    pub fn inline(filename: &str, window: usize, id_column: &str) -> Result<Self> {
         let conn = Connection::open(filename).map_err(|e| errors::DataError::FailedToConnect {
             source: e,
             filename: filename.into(),
         })?;
-        Ok(GeneBook::Inline(Mutex::new(conn), window))
+        Ok(GeneBook::Inline(
+            Mutex::new(conn),
+            window,
+            id_column.to_owned(),
+        ))
     }
 
     pub fn get(&self, g: &str) -> Result<Gene> {
@@ -125,10 +134,10 @@ impl GeneBook {
                 .get(g)
                 .cloned()
                 .ok_or_else(|| errors::DataError::UnknownId(g.to_owned()).into()),
-            GeneBook::Inline(conn_mutex, window) => {
+            GeneBook::Inline(conn_mutex, window, id_column) => {
                 let conn = conn_mutex.lock().expect("MUTEX POISONING");
                 let mut query = conn.prepare(
-                    "SELECT left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes WHERE id=?",
+                    &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes WHERE {id_column}=?"),
                 )?;
                 query
                     .query_row(&[g], |r| {
