@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Franklin Delehelle <delehelle@ens.fr>"]
 license = "CECILL-C"
+description = "TODO"
+homepage = "https://github.com/delehef/syntesuite"
+repository = "https://github.com/delehef/syntesuite"
+readme = "CHANGELOG.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
