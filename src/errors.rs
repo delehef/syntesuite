@@ -9,15 +9,6 @@ pub enum FileError {
         filename: String,
     },
 
-    #[error("{} not found", .0.bright_yellow().bold())]
-    NotFound(String),
-
-    #[error("while creating {filename}")]
-    WhileCreating {
-        source: std::io::Error,
-        filename: String,
-    },
-
     #[error("invalid filename: {}", .0.yellow().bold())]
     InvalidFilename(String),
 }
@@ -32,4 +23,19 @@ pub enum DataError {
         source: rusqlite::Error,
         filename: String,
     },
+}
+
+#[derive(Error, Debug)]
+pub enum ParseError {
+    #[error("wrongly formatted GFF file")]
+    GffError(crate::gff::GffError),
+
+    #[error("wrongly formatted BED file")]
+    BedError(crate::bed::BedError),
+
+    #[error("invalid phase value: {0}")]
+    InvalidPhase(String),
+
+    #[error("invalid strand value: {0}")]
+    InvalidStrand(String),
 }

@@ -8,7 +8,7 @@ use crate::{Phase, Strand};
 
 #[derive(Debug, Error)]
 pub enum GffError {
-    #[error("invalid entry: {0}")]
+    #[error("GFF entry with missing fields: {0}")]
     RecordTooShort(String),
 
     #[error("attribute entry contains more than one `=`: {0}")]
@@ -68,7 +68,7 @@ impl From<&str> for Key {
 
 type Attributes = HashMap<Key, Vec<String>>;
 #[derive(Debug)]
-pub struct Record {
+pub struct GffRecord {
     chr: String,
     source: Option<String>,
     class: Option<String>,
@@ -79,7 +79,7 @@ pub struct Record {
     phase: Option<Phase>,
     attributes: Attributes,
 }
-impl Record {
+impl GffRecord {
     pub fn chr(&self) -> &str {
         &self.chr
     }
@@ -142,13 +142,13 @@ impl<T: Read> GffReader<T> {
     }
 }
 impl<T: Read> Iterator for GffReader<T> {
-    type Item = Result<Record, GffError>;
+    type Item = Result<GffRecord, GffError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        fn make_record(line: &str) -> Result<Record, GffError> {
+        fn make_record(line: &str) -> Result<GffRecord, GffError> {
             let mut s = line.split('\t');
 
-            Ok(Record {
+            Ok(GffRecord {
                 chr: s
                     .next()
                     .map(|s| s.to_string())

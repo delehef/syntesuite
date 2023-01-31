@@ -12,8 +12,9 @@ use std::{
 use thiserror::*;
 
 use crate::{
-    errors::{DataError, FileError},
-    gff, Strand,
+    bed,
+    errors::{DataError, FileError, ParseError},
+    gff, Record, Strand,
 };
 
 #[derive(Error, Debug)]
@@ -64,15 +65,58 @@ fn parse_family(
     Ok(())
 }
 
-fn parse_genome(
-    f: &str,
+fn parse_genome_gff3(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, ParseError>>>> {
+    let mut f = File::open(f).map_err(|e| FileError::CannotOpen {
+        source: e,
+        filename: f.to_owned(),
+    })?;
+    let gz = GzDecoder::new(BufReader::new(f.try_clone().unwrap()));
+
+    Ok(match gz.header() {
+        Some(_) => Box::new(
+            gff::GffReader::new(gz)
+                .map(|r| r.map(|r| r.into()).map_err(|e| ParseError::GffError(e))),
+        ),
+        None => {
+            f.rewind()?;
+            Box::new(
+                gff::GffReader::new(BufReader::new(f))
+                    .map(|r| r.map(|r| r.into()).map_err(|e| ParseError::GffError(e))),
+            )
+        }
+    })
+}
+
+fn parse_genome_bed(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, ParseError>>>> {
+    let mut f = File::open(f).map_err(|e| FileError::CannotOpen {
+        source: e,
+        filename: f.to_owned(),
+    })?;
+    let gz = GzDecoder::new(BufReader::new(f.try_clone().unwrap()));
+
+    Ok(match gz.header() {
+        Some(_) => Box::new(
+            bed::BedReader::new(gz)
+                .map(|r| r.map(|r| r.into()).map_err(|e| ParseError::BedError(e))),
+        ),
+        None => {
+            f.rewind()?;
+            Box::new(
+                bed::BedReader::new(BufReader::new(f))
+                    .map(|r| r.map(|r| r.into()).map_err(|e| ParseError::BedError(e))),
+            )
+        }
+    })
+}
+
+fn parse_file(
+    filename: &str,
     species_pattern: &str,
-    id_type: &str,
-    id_pattern: &str,
-    genomes: &mut HashMap<String, HashMap<String, Vec<Annotation>>>,
-    id2ancestral: &HashMap<String, usize>,
-) -> Result<()> {
-    info!("Processing {}", f.bright_white().bold());
+) -> Result<(
+    String,
+    impl Iterator<Item = Result<crate::Record, ParseError>>,
+)> {
+    info!("Processing {}", filename.bright_white().bold());
     let species_regex = Regex::new(species_pattern).map_err(|e| Error::InvalidRegex {
         source: e,
         re: species_pattern.to_string(),
@@ -89,16 +133,40 @@ fn parse_genome(
     }
     let species = species_regex
         .captures(
-            std::path::Path::new(f)
+            std::path::Path::new(filename)
                 .file_name()
-                .ok_or_else(|| FileError::InvalidFilename(f.to_string()))?
+                .ok_or_else(|| FileError::InvalidFilename(filename.to_string()))?
                 .to_str()
-                .ok_or_else(|| FileError::InvalidFilename(f.to_string()))?,
+                .ok_or_else(|| FileError::InvalidFilename(filename.to_string()))?,
         )
-        .ok_or_else(|| Error::SpeciesNotFound(f.to_string()))?["species"]
+        .ok_or_else(|| Error::SpeciesNotFound(filename.to_string()))?["species"]
         .to_string();
     info!("Species: {}", species);
+    let records = if filename.ends_with("gff")
+        || filename.ends_with("gff3")
+        || filename.ends_with("gff.gz")
+        || filename.ends_with("gff3.gz")
+    {
+        parse_genome_gff3(filename)?
+    } else if filename.ends_with("bed") || filename.ends_with("bed.gz") {
+        parse_genome_bed(filename)?
+    } else {
+        bail!(
+            "unable to process {}: unknown filetype",
+            filename.yellow().bold()
+        )
+    };
+    Ok((species, records))
+}
 
+fn parse_genome(
+    f: &str,
+    species_pattern: &str,
+    id_type: &str,
+    id_pattern: &str,
+    genomes: &mut HashMap<String, HashMap<String, Vec<Annotation>>>,
+    id2ancestral: &HashMap<String, usize>,
+) -> Result<()> {
     let id_regex = Regex::new(id_pattern).map_err(|e| Error::InvalidRegex {
         source: e,
         re: id_pattern.to_string(),
@@ -114,23 +182,11 @@ fn parse_genome(
         .into());
     }
 
-    let mut f = File::open(f).map_err(|e| FileError::CannotOpen {
-        source: e,
-        filename: f.to_owned(),
-    })?;
-    let gz = GzDecoder::new(BufReader::new(&f));
-    let gff: Box<dyn Iterator<Item = Result<gff::Record, _>>> = match gz.header() {
-        Some(_) => Box::new(gff::GffReader::new(gz)),
-        None => {
-            f.rewind()?;
-            Box::new(gff::GffReader::new(BufReader::new(&f)))
-        }
-    };
-
     let mut seen = HashSet::new();
-    for record in gff {
+    let (species, records) = parse_file(f, species_pattern)?;
+    for record in records {
         let record = record?;
-        if record.class().map(|g| g == id_type).unwrap_or(false) {
+        if record.is_class(id_type) {
             let id = record.id().ok_or_else(|| {
                 Error::RecordWithoutId(format!(
                     "{}:{}-{}",
@@ -152,7 +208,7 @@ fn parse_genome(
                         .or_default()
                         .push(Annotation {
                             id: id.to_string(),
-                            dir: record.strand().unwrap(),
+                            dir: record.strand(),
                             start: record.start(),
                             stop: record.end(),
                             ancestral_id: *ancestral_id,
@@ -181,7 +237,7 @@ fn parse_genome(
     Ok(())
 }
 
-pub fn db_from_gffs(
+pub fn db_from_files(
     families: &[String],
     gffs: &[String],
     db_file: &str,
