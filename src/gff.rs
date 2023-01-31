@@ -1,96 +1,18 @@
 #![allow(dead_code)]
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::io::prelude::*;
 use std::io::{BufReader, Lines};
 use thiserror::Error;
 
+use crate::{Phase, Strand};
+
 #[derive(Debug, Error)]
 pub enum GffError {
-    #[error("invalid phase value: {0}")]
-    InvalidPhase(String),
-
-    #[error("invalid strand value: {0}")]
-    InvalidStrand(String),
-
     #[error("invalid entry: {0}")]
     RecordTooShort(String),
 
     #[error("attribute entry contains more than one `=`: {0}")]
     IncorrectAttribute(String),
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Phase {
-    Sync,
-    OneShifted,
-    TwoShifted,
-}
-impl TryFrom<&str> for Phase {
-    type Error = GffError;
-
-    fn try_from(x: &str) -> Result<Self, Self::Error> {
-        match x {
-            "0" => Ok(Phase::Sync),
-            "1" => Ok(Phase::OneShifted),
-            "2" => Ok(Phase::TwoShifted),
-            _ => Err(GffError::InvalidPhase(x.to_string())),
-        }
-    }
-}
-impl TryFrom<usize> for Phase {
-    type Error = GffError;
-
-    fn try_from(x: usize) -> Result<Self, Self::Error> {
-        match x {
-            0 => Ok(Phase::Sync),
-            1 => Ok(Phase::OneShifted),
-            2 => Ok(Phase::TwoShifted),
-            _ => Err(GffError::InvalidPhase(x.to_string())),
-        }
-    }
-}
-impl From<Phase> for usize {
-    fn from(p: Phase) -> Self {
-        match p {
-            Phase::Sync => 0,
-            Phase::OneShifted => 1,
-            Phase::TwoShifted => 2,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Strand {
-    Direct,
-    Reverse,
-}
-impl TryFrom<&str> for Strand {
-    type Error = GffError;
-
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        match s {
-            "+" => Ok(Strand::Direct),
-            "-" => Ok(Strand::Reverse),
-            _ => Err(GffError::InvalidStrand(s.to_string())),
-        }
-    }
-}
-impl From<Strand> for char {
-    fn from(s: Strand) -> Self {
-        match s {
-            Strand::Direct => '+',
-            Strand::Reverse => '-',
-        }
-    }
-}
-impl From<Strand> for String {
-    fn from(s: Strand) -> Self {
-        match s {
-            Strand::Direct => "+".into(),
-            Strand::Reverse => "-".into(),
-        }
-    }
 }
 
 /// A key to a GFF3 record attribute, as defined in http://gmod.org/wiki/GFF3

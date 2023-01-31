@@ -13,7 +13,7 @@ use thiserror::*;
 
 use crate::{
     errors::{DataError, FileError},
-    gff,
+    gff, Strand,
 };
 
 #[derive(Error, Debug)]
@@ -36,7 +36,7 @@ pub enum Error {
 
 struct Annotation {
     id: String,
-    dir: gff::Strand,
+    dir: Strand,
     start: usize,
     stop: usize,
     ancestral_id: usize,
