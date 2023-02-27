@@ -6,6 +6,8 @@ use std::sync::Mutex;
 
 use crate::errors;
 
+pub type FamilyID = usize;
+
 #[allow(dead_code)]
 pub enum GeneBook {
     InMemory(HashMap<String, Gene>),
@@ -15,8 +17,22 @@ pub enum GeneBook {
 
 #[derive(Clone, Default)]
 pub struct Gene {
+    pub id: String,
     pub species: String,
-    pub landscape: Vec<usize>,
+    pub family: FamilyID,
+    pub chr: String,
+    pub pos: usize,
+    pub left_landscape: Vec<FamilyID>,
+    pub right_landscape: Vec<FamilyID>,
+}
+impl Gene {
+    pub fn landscape(&self) -> impl Iterator<Item = FamilyID> + '_ {
+        self.left_landscape
+            .iter()
+            .cloned()
+            .chain(vec![self.family].into_iter())
+            .chain(self.right_landscape.iter().cloned())
+    }
 }
 
 impl GeneBook {
@@ -44,6 +60,8 @@ impl GeneBook {
                     r.get::<_, String>(2)?, // right tail
                     r.get::<_, usize>(3)?,  // ancestral id
                     r.get::<_, String>(4)?, // species
+                    r.get::<_, String>(5)?, // chr
+                    r.get::<_, usize>(6)?,  // position
                 ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -62,12 +80,13 @@ impl GeneBook {
                 (
                     g.0.clone(),
                     Gene {
+                        id: g.0.to_string(),
                         species: g.4,
-                        landscape: left_landscape
-                            .into_iter()
-                            .chain([g.3].into_iter())
-                            .chain(right_landscape.into_iter())
-                            .collect(),
+                        family: g.3,
+                        chr: g.5,
+                        pos: g.6,
+                        left_landscape,
+                        right_landscape,
                     },
                 )
             })
@@ -82,7 +101,7 @@ impl GeneBook {
             filename: filename.into(),
         })?;
         let query = conn.prepare(&format!(
-            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes"
+            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, position FROM genomes"
         ))?;
         let r = Self::get_rows(query, [], window)?;
         info!("Done.");
@@ -103,7 +122,7 @@ impl GeneBook {
         })?;
 
         let query = conn.prepare(&format!(
-            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes WHERE {id_column} IN ({})",
+            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, position FROM genomes WHERE {id_column} IN ({})",
             std::iter::repeat("?").take(ids.len()).collect::<Vec<_>>().join(", ")
         ))?;
         let r = Self::get_rows(
@@ -137,7 +156,7 @@ impl GeneBook {
             GeneBook::Inline(conn_mutex, window, id_column) => {
                 let conn = conn_mutex.lock().expect("MUTEX POISONING");
                 let mut query = conn.prepare(
-                    &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species FROM genomes WHERE {id_column}=?"),
+                    &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species, chr, position FROM genomes WHERE {id_column}=?"),
                 )?;
                 query
                     .query_row(&[g], |r| {
@@ -152,12 +171,13 @@ impl GeneBook {
                         right_landscape.truncate(*window);
 
                         rusqlite::Result::Ok(Gene {
+                            id: g.to_string(),
                             species,
-                            landscape: left_landscape
-                                .into_iter()
-                                .chain([r.get::<usize, _>(2)?].into_iter())
-                                .chain(right_landscape.into_iter())
-                                .collect(),
+                            family: r.get::<usize, _>(2)?,
+                            chr: r.get::<_, String>(4)?,
+                            pos: r.get::<usize, _>(5)?,
+                            left_landscape,
+                            right_landscape,
                         })
                     })
                     .with_context(|| "while accessing DB")
