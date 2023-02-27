@@ -101,7 +101,7 @@ impl GeneBook {
             filename: filename.into(),
         })?;
         let query = conn.prepare(&format!(
-            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, position FROM genomes"
+            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start FROM genomes"
         ))?;
         let r = Self::get_rows(query, [], window)?;
         info!("Done.");
@@ -122,7 +122,7 @@ impl GeneBook {
         })?;
 
         let query = conn.prepare(&format!(
-            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, position FROM genomes WHERE {id_column} IN ({})",
+            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start FROM genomes WHERE {id_column} IN ({})",
             std::iter::repeat("?").take(ids.len()).collect::<Vec<_>>().join(", ")
         ))?;
         let r = Self::get_rows(
