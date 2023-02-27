@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2023-02-27
+
+### Bug Fixes
+
+- Wrong column name
+
 ## [0.2.0] - 2023-02-27
 
 ### Features
@@ -18,6 +24,7 @@ All notable changes to this project will be documented in this file.
 - Downgrade to Guix
 - Release syntesuite version 0.1.0
 - Add missing fields
+- Release syntesuite version 0.2.0
 
 ### Refactor
 
