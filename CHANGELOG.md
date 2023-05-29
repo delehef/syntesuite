@@ -2,11 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2023-05-29
+
+### Bug Fixes
+
+- Obsolete column name
+
+### Miscellaneous Tasks
+
+- Add git-cliff as a dependency
+
 ## [0.2.1] - 2023-02-27
 
 ### Bug Fixes
 
 - Wrong column name
+
+### Miscellaneous Tasks
+
+- Release syntesuite version 0.2.1
 
 ## [0.2.0] - 2023-02-27
 
