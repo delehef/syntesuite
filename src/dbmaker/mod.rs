@@ -306,7 +306,8 @@ pub fn db_from_files(
         source: e,
         filename: db_file.into(),
     })?;
-    conn.execute("DROP TABLE IF EXISTS genomes;", [])?;
+    conn.execute("DROP TABLE IF EXISTS genomes;", [])
+        .with_context(|| "while dropping table")?;
     conn.execute(
         "CREATE TABLE genomes (
             species text, chr text, ancestral_id integer, ancestral text, id text,
@@ -315,8 +316,10 @@ pub fn db_from_files(
         )",
         [],
     )
-    .with_context(|| anyhow!("while creating database"))?;
+    .with_context(|| "while creating database")?;
     info!("Filling database...");
+    conn.execute("pragma temp_store = memory;", [])
+        .with_context(|| "while setting temp_store")?;
     for (species, genome) in genomes.iter() {
         debug!("Inserting {}", species.bold());
         for (chr, ids) in genome.iter() {
@@ -377,7 +380,8 @@ pub fn db_from_files(
          CREATE INDEX genomes_chr     ON genomes(chr);
          CREATE INDEX genomes_id      ON genomes(id);
          CREATE INDEX genomes_start   ON genomes(start);",
-    )?;
+    )
+    .with_context(|| "while creating indices")?;
 
     Ok(())
 }

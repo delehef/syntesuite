@@ -130,7 +130,6 @@ impl GeneBook {
             rusqlite::params_from_iter(ids.iter().map(|s| s.as_ref())),
             window,
         )?;
-        info!("Done.");
         Ok(GeneBook::Cached(r))
     }
 
@@ -156,7 +155,7 @@ impl GeneBook {
             GeneBook::Inline(conn_mutex, window, id_column) => {
                 let conn = conn_mutex.lock().expect("MUTEX POISONING");
                 let mut query = conn.prepare(
-                    &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species, chr, position FROM genomes WHERE {id_column}=?"),
+                    &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species, chr, start FROM genomes WHERE {id_column}=?"),
                 )?;
                 query
                     .query_row(&[g], |r| {
