@@ -18,7 +18,7 @@ flate2 = "1.0"
 log = "0.4"
 petname = "1"
 regex = "1.6"
-rusqlite = "0.29"
+rusqlite = "0.26.1" # don't update me for Guix
 thiserror = "1.0"
 
 [package.metadata.release]
