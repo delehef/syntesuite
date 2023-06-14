@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2023-06-14
+
+### Miscellaneous Tasks
+
+- Downgrade dependencies for Guix
+
 ## [0.2.3] - 2023-06-14
 
 ### Bug Fixes
@@ -13,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Add git-cliff as a dependency
 - Release syntesuite version 0.2.2
 - Update dependencies
+- Release syntesuite version 0.2.3
 
 ## [0.2.1] - 2023-02-27
 
