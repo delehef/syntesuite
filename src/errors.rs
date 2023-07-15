@@ -23,6 +23,9 @@ pub enum DataError {
         source: rusqlite::Error,
         filename: String,
     },
+
+    #[error("inline gene books can not be accessed mutably")]
+    ImmutableBook,
 }
 
 #[derive(Error, Debug)]

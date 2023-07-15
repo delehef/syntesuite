@@ -1,3 +1,5 @@
+use std::write;
+
 use errors::ParseError;
 
 mod bed;
@@ -46,10 +48,21 @@ impl From<Phase> for usize {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Strand {
     Direct,
     Reverse,
+    Unknown,
+}
+impl std::default::Default for Strand {
+    fn default() -> Strand {
+        Strand::Unknown
+    }
+}
+impl std::fmt::Display for Strand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", Into::<char>::into(*self))
+    }
 }
 impl TryFrom<&str> for Strand {
     type Error = ParseError;
@@ -58,7 +71,20 @@ impl TryFrom<&str> for Strand {
         match s {
             "+" => Ok(Strand::Direct),
             "-" => Ok(Strand::Reverse),
+            "." => Ok(Strand::Unknown),
             _ => Err(ParseError::InvalidStrand(s.to_string())),
+        }
+    }
+}
+impl TryFrom<char> for Strand {
+    type Error = ParseError;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            '+' => Ok(Strand::Direct),
+            '-' => Ok(Strand::Reverse),
+            '.' => Ok(Strand::Unknown),
+            _ => Err(ParseError::InvalidStrand(c.to_string())),
         }
     }
 }
@@ -67,6 +93,7 @@ impl From<Strand> for char {
         match s {
             Strand::Direct => '+',
             Strand::Reverse => '-',
+            Strand::Unknown => '.',
         }
     }
 }
@@ -75,6 +102,7 @@ impl From<Strand> for String {
         match s {
             Strand::Direct => "+".into(),
             Strand::Reverse => "-".into(),
+            Strand::Unknown => "-".into(),
         }
     }
 }

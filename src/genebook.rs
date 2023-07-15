@@ -4,7 +4,7 @@ use rusqlite::Connection;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use crate::errors;
+use crate::{errors, Strand};
 
 pub type FamilyID = usize;
 
@@ -15,6 +15,23 @@ pub enum GeneBook {
     Inline(Mutex<Connection>, usize, String),
 }
 
+#[derive(Clone, Copy)]
+pub struct TailGene {
+    pub family: FamilyID,
+    pub strand: Strand,
+}
+impl std::fmt::Debug for TailGene {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}/{}", self.family, self.strand)
+    }
+}
+impl std::cmp::PartialEq for TailGene {
+    fn eq(&self, other: &Self) -> bool {
+        self.family == other.family
+    }
+}
+impl std::cmp::Eq for TailGene {}
+
 #[derive(Clone, Default)]
 pub struct Gene {
     pub id: String,
@@ -22,28 +39,49 @@ pub struct Gene {
     pub family: FamilyID,
     pub chr: String,
     pub pos: usize,
-    pub left_landscape: Vec<FamilyID>,
-    pub right_landscape: Vec<FamilyID>,
+    pub strand: Strand,
+    pub left_landscape: Vec<TailGene>,
+    pub right_landscape: Vec<TailGene>,
 }
 impl Gene {
-    pub fn landscape(&self) -> impl Iterator<Item = FamilyID> + '_ {
+    pub fn landscape(&self) -> impl Iterator<Item = TailGene> + '_ {
         self.left_landscape
             .iter()
             .cloned()
-            .chain(vec![self.family].into_iter())
+            .chain(
+                std::iter::once(TailGene {
+                    family: self.family,
+                    strand: self.strand,
+                })
+                .into_iter(),
+            )
             .chain(self.right_landscape.iter().cloned())
     }
 }
 
 impl GeneBook {
-    fn parse_landscape(landscape: &str) -> Vec<usize> {
+    fn parse_landscape(landscape: &str) -> Vec<TailGene> {
+        fn parse_tailgene(g: &str) -> TailGene {
+            let strand = g
+                .chars()
+                .next()
+                .and_then(|c| c.try_into().ok())
+                .unwrap_or_default();
+            let family_id = g
+                .strip_prefix(&['+', '-', '.'])
+                .unwrap_or(g)
+                .parse::<usize>()
+                .unwrap();
+            TailGene {
+                family: family_id,
+                strand,
+            }
+        }
+
         if landscape.is_empty() {
             Vec::new()
         } else {
-            landscape
-                .split('.')
-                .map(|x| x.parse::<usize>().unwrap())
-                .collect::<Vec<_>>()
+            landscape.split('.').map(parse_tailgene).collect::<Vec<_>>()
         }
     }
 
@@ -69,6 +107,12 @@ impl GeneBook {
         Ok(genes
             .into_iter()
             .map(|g| {
+                let id = g.0.to_string();
+                let strand = id
+                    .chars()
+                    .next()
+                    .and_then(|c| c.try_into().ok())
+                    .unwrap_or_default();
                 let mut left_landscape = Self::parse_landscape(&g.1);
                 left_landscape.reverse();
                 left_landscape.truncate(window);
@@ -80,11 +124,12 @@ impl GeneBook {
                 (
                     g.0.clone(),
                     Gene {
-                        id: g.0.to_string(),
+                        id,
                         species: g.4,
                         family: g.3,
                         chr: g.5,
                         pos: g.6,
+                        strand,
                         left_landscape,
                         right_landscape,
                     },
@@ -155,7 +200,7 @@ impl GeneBook {
             GeneBook::Inline(conn_mutex, window, id_column) => {
                 let conn = conn_mutex.lock().expect("MUTEX POISONING");
                 let mut query = conn.prepare(
-                    &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species, chr, start FROM genomes WHERE {id_column}=?"),
+                    &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes WHERE {id_column}=?"),
                 )?;
                 query
                     .query_row(&[g], |r| {
@@ -169,18 +214,35 @@ impl GeneBook {
                         let mut right_landscape = Self::parse_landscape(&r.get::<_, String>(1)?);
                         right_landscape.truncate(*window);
 
+                        let strand = r
+                            .get::<_, String>(6)?
+                            .chars()
+                            .next()
+                            .and_then(|c| c.try_into().ok())
+                            .unwrap_or_default();
+
                         rusqlite::Result::Ok(Gene {
                             id: g.to_string(),
                             species,
                             family: r.get::<usize, _>(2)?,
                             chr: r.get::<_, String>(4)?,
                             pos: r.get::<usize, _>(5)?,
+                            strand,
                             left_landscape,
                             right_landscape,
                         })
                     })
                     .with_context(|| "while accessing DB")
             }
+        }
+    }
+
+    pub fn get_mut(&mut self, g: &str) -> Result<&mut Gene> {
+        match self {
+            GeneBook::InMemory(book) | GeneBook::Cached(book) => book
+                .get_mut(g)
+                .ok_or_else(|| errors::DataError::UnknownId(g.to_owned()).into()),
+            GeneBook::Inline(..) => Err(errors::DataError::ImmutableBook.into()),
         }
     }
 }

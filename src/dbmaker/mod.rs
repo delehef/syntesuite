@@ -331,19 +331,19 @@ pub fn db_from_files(
                 let k = ((ids.len() as isize - 1).min(j + window)) as usize;
                 let left_landscape_ids = ids[i..j as usize]
                     .iter()
-                    .map(|a| a.ancestral_id)
+                    .map(|a| format!("{}{}", a.dir, a.ancestral_id))
                     .collect::<Vec<_>>();
-                let left_landscape_names = left_landscape_ids
+                let left_landscape_names = ids[i..j as usize]
                     .iter()
-                    .map(|id| ancestral_names[*id].clone())
+                    .map(|id| ancestral_names[id.ancestral_id].clone())
                     .collect::<Vec<_>>();
                 let right_landscape_ids = ids[j as usize + 1..=k]
                     .iter()
-                    .map(|a| a.ancestral_id)
+                    .map(|a| format!("{}{}", a.dir, a.ancestral_id))
                     .collect::<Vec<_>>();
-                let right_landscape_names = right_landscape_ids
+                let right_landscape_names = ids[j as usize + 1..=k]
                     .iter()
-                    .map(|id| ancestral_names[*id].clone())
+                    .map(|id| ancestral_names[id.ancestral_id].clone())
                     .collect::<Vec<_>>();
                 let insert = format!(
                     "INSERT INTO genomes (species, chr, ancestral_id, ancestral, id, start, stop, direction, left_tail_ids, left_tail_names, right_tail_ids, right_tail_names) VALUES ('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')",
