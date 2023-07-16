@@ -2,11 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2023-07-16
+
+### Features
+
+- Add strand information to the landscape
+- Add strand, drop pretty landscape names
+
 ## [0.2.4] - 2023-06-14
 
 ### Miscellaneous Tasks
 
 - Downgrade dependencies for Guix
+- Release syntesuite version 0.2.4
 
 ## [0.2.3] - 2023-06-14
 
