@@ -54,6 +54,15 @@ pub enum Strand {
     Reverse,
     Unknown,
 }
+impl Strand {
+    pub fn reverse(&mut self) {
+        match self {
+            Strand::Direct => *self = Strand::Reverse,
+            Strand::Reverse => *self = Strand::Direct,
+            Strand::Unknown => {}
+        }
+    }
+}
 impl std::default::Default for Strand {
     fn default() -> Strand {
         Strand::Unknown

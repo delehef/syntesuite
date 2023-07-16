@@ -100,6 +100,7 @@ impl GeneBook {
                     r.get::<_, String>(4)?, // species
                     r.get::<_, String>(5)?, // chr
                     r.get::<_, usize>(6)?,  // position
+                    r.get::<_, String>(7)?, // direction
                 ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -108,11 +109,6 @@ impl GeneBook {
             .into_iter()
             .map(|g| {
                 let id = g.0.to_string();
-                let strand = id
-                    .chars()
-                    .next()
-                    .and_then(|c| c.try_into().ok())
-                    .unwrap_or_default();
                 let mut left_landscape = Self::parse_landscape(&g.1);
                 left_landscape.reverse();
                 left_landscape.truncate(window);
@@ -129,7 +125,7 @@ impl GeneBook {
                         family: g.3,
                         chr: g.5,
                         pos: g.6,
-                        strand,
+                        strand: g.7.as_str().try_into().unwrap(),
                         left_landscape,
                         right_landscape,
                     },
@@ -146,7 +142,7 @@ impl GeneBook {
             filename: filename.into(),
         })?;
         let query = conn.prepare(&format!(
-            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start FROM genomes"
+            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes"
         ))?;
         let r = Self::get_rows(query, [], window)?;
         info!("Done.");
@@ -167,7 +163,7 @@ impl GeneBook {
         })?;
 
         let query = conn.prepare(&format!(
-            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start FROM genomes WHERE {id_column} IN ({})",
+            "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes WHERE {id_column} IN ({})",
             std::iter::repeat("?").take(ids.len()).collect::<Vec<_>>().join(", ")
         ))?;
         let r = Self::get_rows(

@@ -45,11 +45,10 @@ struct Annotation {
 
 fn parse_family(
     f: &str,
-    ancestral_names: &mut Vec<String>,
+    current_ancestral_id: &mut usize,
     id2ancestral: &mut HashMap<String, usize>,
 ) -> Result<()> {
     trace!("Processing {}", f.bright_white().bold());
-    let i = ancestral_names.len();
     for l in BufReader::new(File::open(f).map_err(|e| FileError::CannotOpen {
         source: e,
         filename: f.to_owned(),
@@ -57,10 +56,10 @@ fn parse_family(
     .lines()
     {
         for id in l?.split_whitespace() {
-            id2ancestral.insert(id.into(), i);
+            id2ancestral.insert(id.into(), *current_ancestral_id);
         }
     }
-    ancestral_names.push(petname::Petnames::default().generate_one(2, "-"));
+    *current_ancestral_id += 1;
 
     Ok(())
 }
@@ -246,7 +245,7 @@ pub fn db_from_files(
     id_pattern: &str,
     window: isize,
 ) -> Result<()> {
-    let mut ancestral_names = Vec::new();
+    let mut current_ancestral_id = 1;
     let mut id2ancestral = HashMap::new();
     info!("Parsing families...");
     for name in families.iter() {
@@ -260,10 +259,14 @@ pub fn db_from_files(
                         .map_err(|_| todo!())
                 })
             {
-                parse_family(f.unwrap().as_str(), &mut ancestral_names, &mut id2ancestral)?;
+                parse_family(
+                    f.unwrap().as_str(),
+                    &mut current_ancestral_id,
+                    &mut id2ancestral,
+                )?;
             }
         } else {
-            parse_family(name, &mut ancestral_names, &mut id2ancestral)?;
+            parse_family(name, &mut current_ancestral_id, &mut id2ancestral)?;
         }
     }
 
@@ -310,9 +313,9 @@ pub fn db_from_files(
         .with_context(|| "while dropping table")?;
     conn.execute(
         "CREATE TABLE genomes (
-            species text, chr text, ancestral_id integer, ancestral text, id text,
+            species text, chr text, ancestral_id integer, id text,
             start integer, stop integer, direction char,
-            left_tail_ids text, left_tail_names text, right_tail_ids text, right_tail_names text
+            left_tail_ids text, right_tail_ids text
         )",
         [],
     )
@@ -333,24 +336,15 @@ pub fn db_from_files(
                     .iter()
                     .map(|a| format!("{}{}", a.dir, a.ancestral_id))
                     .collect::<Vec<_>>();
-                let left_landscape_names = ids[i..j as usize]
-                    .iter()
-                    .map(|id| ancestral_names[id.ancestral_id].clone())
-                    .collect::<Vec<_>>();
                 let right_landscape_ids = ids[j as usize + 1..=k]
                     .iter()
                     .map(|a| format!("{}{}", a.dir, a.ancestral_id))
                     .collect::<Vec<_>>();
-                let right_landscape_names = ids[j as usize + 1..=k]
-                    .iter()
-                    .map(|id| ancestral_names[id.ancestral_id].clone())
-                    .collect::<Vec<_>>();
                 let insert = format!(
-                    "INSERT INTO genomes (species, chr, ancestral_id, ancestral, id, start, stop, direction, left_tail_ids, left_tail_names, right_tail_ids, right_tail_names) VALUES ('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')",
+                    "INSERT INTO genomes (species, chr, ancestral_id, id, start, stop, direction, left_tail_ids, right_tail_ids) VALUES ('{}','{}','{}','{}','{}','{}','{}','{}','{}')",
                     species,
                     chr,
                     id.ancestral_id,
-                    ancestral_names[id.ancestral_id],
                     id.id,
                     id.start,
                     id.stop,
@@ -360,13 +354,11 @@ pub fn db_from_files(
                         .map(|x| x.to_string())
                         .collect::<Vec<_>>()
                         .join("."),
-                    left_landscape_names.join("."),
                     right_landscape_ids
                         .into_iter()
                         .map(|x| x.to_string())
                         .collect::<Vec<_>>()
                         .join("."),
-                    right_landscape_names.join("."),
                 );
                 tx.execute(&insert, [])?;
             }
