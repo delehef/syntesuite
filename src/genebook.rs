@@ -10,9 +10,19 @@ pub type FamilyID = usize;
 
 #[allow(dead_code)]
 pub enum GeneBook {
-    InMemory(HashMap<String, Gene>),
-    Cached(HashMap<String, Gene>),
-    Inline(Mutex<Connection>, usize, String),
+    InMemory {
+        genes: HashMap<String, Gene>,
+        species: Vec<String>,
+    },
+    Cached {
+        genes: HashMap<String, Gene>,
+        species: Vec<String>,
+    },
+    Inline {
+        conn: Mutex<Connection>,
+        window: usize,
+        id_column: String,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -144,9 +154,14 @@ impl GeneBook {
         let query = conn.prepare(&format!(
             "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes"
         ))?;
-        let r = Self::get_rows(query, [], window)?;
+        let genes = Self::get_rows(query, [], window)?;
+        let species = conn
+            .prepare("SELECT DISTINCT species FROM genomes")?
+            .query_map([], |row| row.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+
         info!("Done.");
-        Ok(GeneBook::InMemory(r))
+        Ok(GeneBook::InMemory { genes, species })
     }
 
     pub fn cached<S: AsRef<str>>(
@@ -166,12 +181,17 @@ impl GeneBook {
             "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes WHERE {id_column} IN ({})",
             std::iter::repeat("?").take(ids.len()).collect::<Vec<_>>().join(", ")
         ))?;
-        let r = Self::get_rows(
+        let genes = Self::get_rows(
             query,
             rusqlite::params_from_iter(ids.iter().map(|s| s.as_ref())),
             window,
         )?;
-        Ok(GeneBook::Cached(r))
+        let species = conn
+            .prepare("SELECT DISTINCT species FROM genomes")?
+            .query_map([], |row| row.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(GeneBook::Cached { genes, species })
     }
 
     #[allow(dead_code)]
@@ -180,20 +200,24 @@ impl GeneBook {
             source: e,
             filename: filename.into(),
         })?;
-        Ok(GeneBook::Inline(
-            Mutex::new(conn),
+        Ok(GeneBook::Inline {
+            conn: Mutex::new(conn),
             window,
-            id_column.to_owned(),
-        ))
+            id_column: id_column.to_owned(),
+        })
     }
 
     pub fn get(&self, g: &str) -> Result<Gene> {
         match self {
-            GeneBook::InMemory(book) | GeneBook::Cached(book) => book
+            GeneBook::InMemory { genes, .. } | GeneBook::Cached { genes, .. } => genes
                 .get(g)
                 .cloned()
                 .ok_or_else(|| errors::DataError::UnknownId(g.to_owned()).into()),
-            GeneBook::Inline(conn_mutex, window, id_column) => {
+            GeneBook::Inline {
+                conn: conn_mutex,
+                window,
+                id_column,
+            } => {
                 let conn = conn_mutex.lock().expect("MUTEX POISONING");
                 let mut query = conn.prepare(
                     &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes WHERE {id_column}=?"),
@@ -235,10 +259,31 @@ impl GeneBook {
 
     pub fn get_mut(&mut self, g: &str) -> Result<&mut Gene> {
         match self {
-            GeneBook::InMemory(book) | GeneBook::Cached(book) => book
+            GeneBook::InMemory { genes, .. } | GeneBook::Cached { genes, .. } => genes
                 .get_mut(g)
                 .ok_or_else(|| errors::DataError::UnknownId(g.to_owned()).into()),
-            GeneBook::Inline(..) => Err(errors::DataError::ImmutableBook.into()),
+            GeneBook::Inline { .. } => Err(errors::DataError::ImmutableBook.into()),
+        }
+    }
+
+    pub fn species(&self) -> Vec<String> {
+        match self {
+            GeneBook::InMemory { species, .. } | GeneBook::Cached { species, .. } => {
+                species.to_owned()
+            }
+            GeneBook::Inline {
+                conn: conn_mutex, ..
+            } => {
+                let conn = conn_mutex.lock().expect("MUTEX POISONING");
+                let species = conn
+                    .prepare("SELECT DISTINCT species FROM genomes")
+                    .unwrap()
+                    .query_map([], |row| row.get::<_, String>(0))
+                    .unwrap()
+                    .collect::<Result<Vec<_>, _>>()
+                    .unwrap();
+                species
+            }
         }
     }
 }
