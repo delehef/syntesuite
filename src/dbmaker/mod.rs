@@ -73,14 +73,13 @@ fn parse_genome_gff3(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, P
 
     Ok(match gz.header() {
         Some(_) => Box::new(
-            gff::GffReader::new(gz)
-                .map(|r| r.map(|r| r.into()).map_err(|e| ParseError::GffError(e))),
+            gff::GffReader::new(gz).map(|r| r.map(|r| r.into()).map_err(ParseError::GffError)),
         ),
         None => {
             f.rewind()?;
             Box::new(
                 gff::GffReader::new(BufReader::new(f))
-                    .map(|r| r.map(|r| r.into()).map_err(|e| ParseError::GffError(e))),
+                    .map(|r| r.map(|r| r.into()).map_err(ParseError::GffError)),
             )
         }
     })
@@ -95,14 +94,13 @@ fn parse_genome_bed(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, Pa
 
     Ok(match gz.header() {
         Some(_) => Box::new(
-            bed::BedReader::new(gz)
-                .map(|r| r.map(|r| r.into()).map_err(|e| ParseError::BedError(e))),
+            bed::BedReader::new(gz).map(|r| r.map(|r| r.into()).map_err(ParseError::BedError)),
         ),
         None => {
             f.rewind()?;
             Box::new(
                 bed::BedReader::new(BufReader::new(f))
-                    .map(|r| r.map(|r| r.into()).map_err(|e| ParseError::BedError(e))),
+                    .map(|r| r.map(|r| r.into()).map_err(ParseError::BedError)),
             )
         }
     })
@@ -351,12 +349,10 @@ pub fn db_from_files(
                     String::from(id.dir),
                     left_landscape_ids
                         .into_iter()
-                        .map(|x| x.to_string())
                         .collect::<Vec<_>>()
                         .join("."),
                     right_landscape_ids
                         .into_iter()
-                        .map(|x| x.to_string())
                         .collect::<Vec<_>>()
                         .join("."),
                 );

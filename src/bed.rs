@@ -21,7 +21,7 @@ pub struct BedRecord {
 }
 impl BedRecord {
     pub fn id(&self) -> Option<&str> {
-        self.id.as_ref().map(String::as_str)
+        self.id.as_deref()
     }
 
     pub fn chr(&self) -> &str {

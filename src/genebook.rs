@@ -58,13 +58,10 @@ impl Gene {
         self.left_landscape
             .iter()
             .cloned()
-            .chain(
-                std::iter::once(TailGene {
-                    family: self.family,
-                    strand: self.strand,
-                })
-                .into_iter(),
-            )
+            .chain(std::iter::once(TailGene {
+                family: self.family,
+                strand: self.strand,
+            }))
             .chain(self.right_landscape.iter().cloned())
     }
 }
@@ -78,7 +75,7 @@ impl GeneBook {
                 .and_then(|c| c.try_into().ok())
                 .unwrap_or_default();
             let family_id = g
-                .strip_prefix(&['+', '-', '.'])
+                .strip_prefix(['+', '-', '.'])
                 .unwrap_or(g)
                 .parse::<usize>()
                 .unwrap();
@@ -223,7 +220,7 @@ impl GeneBook {
                     &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes WHERE {id_column}=?"),
                 )?;
                 query
-                    .query_row(&[g], |r| {
+                    .query_row([g], |r| {
                         let species = r.get::<_, String>(3)?;
 
                         let mut left_landscape = Self::parse_landscape(&r.get::<_, String>(0)?);
