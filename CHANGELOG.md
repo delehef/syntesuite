@@ -2,12 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2023-08-05
+
+### Features
+
+- Add a way to access present species
+
+### Miscellaneous Tasks
+
+- Clippy
+
 ## [0.3.0] - 2023-07-16
 
 ### Features
 
 - Add strand information to the landscape
 - Add strand, drop pretty landscape names
+
+### Miscellaneous Tasks
+
+- Release syntesuite version 0.3.0
 
 ## [0.2.4] - 2023-06-14
 
@@ -18,6 +32,13 @@ All notable changes to this project will be documented in this file.
 
 ## [0.2.3] - 2023-06-14
 
+### Miscellaneous Tasks
+
+- Update dependencies
+- Release syntesuite version 0.2.3
+
+## [0.2.2] - 2023-05-29
+
 ### Bug Fixes
 
 - Obsolete column name
@@ -26,8 +47,6 @@ All notable changes to this project will be documented in this file.
 
 - Add git-cliff as a dependency
 - Release syntesuite version 0.2.2
-- Update dependencies
-- Release syntesuite version 0.2.3
 
 ## [0.2.1] - 2023-02-27
 
