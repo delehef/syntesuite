@@ -2,87 +2,94 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2024-07-21
+
+### ⚙️ Miscellaneous Tasks
+
+- Update rusqlite
+
 ## [0.4.0] - 2023-08-05
 
-### Features
+### 🚀 Features
 
 - Add a way to access present species
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Clippy
+- Release syntesuite version 0.4.0
 
 ## [0.3.0] - 2023-07-16
 
-### Features
+### 🚀 Features
 
 - Add strand information to the landscape
 - Add strand, drop pretty landscape names
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release syntesuite version 0.3.0
 
 ## [0.2.4] - 2023-06-14
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Downgrade dependencies for Guix
 - Release syntesuite version 0.2.4
 
 ## [0.2.3] - 2023-06-14
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update dependencies
 - Release syntesuite version 0.2.3
 
 ## [0.2.2] - 2023-05-29
 
-### Bug Fixes
+### 🐛 Bug Fixes
 
 - Obsolete column name
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Add git-cliff as a dependency
 - Release syntesuite version 0.2.2
 
 ## [0.2.1] - 2023-02-27
 
-### Bug Fixes
+### 🐛 Bug Fixes
 
 - Wrong column name
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release syntesuite version 0.2.1
 
 ## [0.2.0] - 2023-02-27
 
-### Features
+### 🚀 Features
 
 - Add BED parsing
 - Add more infos to genes
 
-### Miscellaneous Tasks
+### 🚜 Refactor
+
+- Share data structures
+
+### ⚙️ Miscellaneous Tasks
 
 - Add missing fields
 - Release syntesuite version 0.2.0
 
-### Refactor
-
-- Share data structures
-
 ## [0.1.0] - 2023-01-23
 
-### Features
+### 🚀 Features
 
 - Add dbmaker
 - Add GeneBook
 - ID column is customizeable
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Setup everything
 - Downgrade to Guix
