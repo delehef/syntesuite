@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1] - 2024-07-30
+
+### 🐛 Bug Fixes
+
+- ChromTable field order
+
 ## [0.6.0] - 2024-07-30
 
 ### 🚀 Features
 
 - Add ChromTable files parsing
+
+### ⚙️ Miscellaneous Tasks
+
+- Release syntesuite version 0.6.0
 
 ## [0.5.0] - 2024-07-21
 
