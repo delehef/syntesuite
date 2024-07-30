@@ -12,7 +12,7 @@ use std::{
 use thiserror::*;
 
 use crate::{
-    bed,
+    bed, chrom,
     errors::{DataError, FileError, ParseError},
     gff, Record, Strand,
 };
@@ -106,6 +106,28 @@ fn parse_genome_bed(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, Pa
     })
 }
 
+fn parse_genome_chrom(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, ParseError>>>> {
+    let mut f = File::open(f).map_err(|e| FileError::CannotOpen {
+        source: e,
+        filename: f.to_owned(),
+    })?;
+    let gz = GzDecoder::new(BufReader::new(f.try_clone().unwrap()));
+
+    Ok(match gz.header() {
+        Some(_) => Box::new(
+            chrom::ChromReader::new(gz)
+                .map(|r| r.map(|r| r.into()).map_err(ParseError::ChromError)),
+        ),
+        None => {
+            f.rewind()?;
+            Box::new(
+                chrom::ChromReader::new(BufReader::new(f))
+                    .map(|r| r.map(|r| r.into()).map_err(ParseError::ChromError)),
+            )
+        }
+    })
+}
+
 fn parse_file(
     filename: &str,
     species_pattern: &str,
@@ -147,6 +169,12 @@ fn parse_file(
         parse_genome_gff3(filename)?
     } else if filename.ends_with("bed") || filename.ends_with("bed.gz") {
         parse_genome_bed(filename)?
+    } else if filename.ends_with("chrom")
+        || filename.ends_with("chrom.gz")
+        || filename.ends_with("tsv")
+        || filename.ends_with("tsv.gz")
+    {
+        parse_genome_chrom(filename)?
     } else {
         bail!(
             "unable to process {}: unknown filetype",

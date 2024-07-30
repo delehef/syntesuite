@@ -6,7 +6,7 @@ use crate::Strand;
 
 #[derive(Debug, Error)]
 pub enum BedError {
-    #[error("GFF entry with missing fields: {0}")]
+    #[error("BED entry with missing fields: {0}")]
     RecordTooShort(String),
 }
 

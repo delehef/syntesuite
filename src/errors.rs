@@ -36,6 +36,9 @@ pub enum ParseError {
     #[error("wrongly formatted BED file")]
     BedError(crate::bed::BedError),
 
+    #[error("wrongly formatted ChromTable file")]
+    ChromError(crate::chrom::ChromError),
+
     #[error("invalid phase value: {0}")]
     InvalidPhase(String),
 
