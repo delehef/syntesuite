@@ -80,15 +80,15 @@ impl<T: Read> Iterator for ChromReader<T> {
                     .ok_or_else(|| ChromError::RecordTooShort(line.to_owned()))?
                     .parse()
                     .unwrap(),
-                id: s
-                    .next()
-                    .ok_or_else(|| ChromError::RecordTooShort(line.to_owned()))?
-                    .to_owned(),
                 strand: s
                     .next()
                     .ok_or_else(|| ChromError::RecordTooShort(line.to_owned()))?
                     .try_into()
                     .map_err(|_| ChromError::UnknownStrand(line.to_owned()))?,
+                id: s
+                    .next()
+                    .ok_or_else(|| ChromError::RecordTooShort(line.to_owned()))?
+                    .to_owned(),
             })
         }
 
