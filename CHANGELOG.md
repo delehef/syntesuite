@@ -2,11 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2024-07-30
+
+### 🚀 Features
+
+- Add ChromTable files parsing
+
 ## [0.5.0] - 2024-07-21
 
 ### ⚙️ Miscellaneous Tasks
 
 - Update rusqlite
+- Release syntesuite version 0.5.0
 
 ## [0.4.0] - 2023-08-05
 
