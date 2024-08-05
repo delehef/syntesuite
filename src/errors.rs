@@ -30,13 +30,13 @@ pub enum DataError {
 
 #[derive(Error, Debug)]
 pub enum ParseError {
-    #[error("wrongly formatted GFF file")]
+    #[error("wrongly formatted GFF file: {0}")]
     GffError(crate::gff::GffError),
 
-    #[error("wrongly formatted BED file")]
+    #[error("wrongly formatted BED file: {0}")]
     BedError(crate::bed::BedError),
 
-    #[error("wrongly formatted ChromTable file")]
+    #[error("wrongly formatted ChromTable file: {0}")]
     ChromError(crate::chrom::ChromError),
 
     #[error("invalid phase value: {0}")]

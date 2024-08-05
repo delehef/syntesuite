@@ -79,8 +79,8 @@ impl TryFrom<&str> for Strand {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
-            "+" => Ok(Strand::Direct),
-            "-" => Ok(Strand::Reverse),
+            "+" | "1" | "+1" => Ok(Strand::Direct),
+            "-" | "-1" => Ok(Strand::Reverse),
             "." => Ok(Strand::Unknown),
             _ => Err(ParseError::InvalidStrand(s.to_string())),
         }
