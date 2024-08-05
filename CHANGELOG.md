@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.2] - 2024-08-05
+
+### 🐛 Bug Fixes
+
+- Strands may be encoded as 1/-1
+
 ## [0.6.1] - 2024-07-30
 
 ### 🐛 Bug Fixes
 
 - ChromTable field order
+
+### ⚙️ Miscellaneous Tasks
+
+- Release syntesuite version 0.6.1
 
 ## [0.6.0] - 2024-07-30
 
