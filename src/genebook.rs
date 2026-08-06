@@ -4,7 +4,7 @@ use rusqlite::Connection;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use crate::{errors, Strand};
+use crate::{dbmaker::LANDSCAPE_DELIMITER, errors, Strand};
 
 pub type FamilyID = usize;
 
@@ -88,7 +88,10 @@ impl GeneBook {
         if landscape.is_empty() {
             Ok(Vec::new())
         } else {
-            landscape.split('.').map(parse_tailgene).collect()
+            landscape
+                .split(LANDSCAPE_DELIMITER)
+                .map(parse_tailgene)
+                .collect()
         }
     }
 

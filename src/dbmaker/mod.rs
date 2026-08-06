@@ -17,6 +17,8 @@ use crate::{
     gff, Record, Strand,
 };
 
+pub const LANDSCAPE_DELIMITER: &str = "#";
+
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("{} is not a valid regex", .re.yellow().bold())]
@@ -375,8 +377,8 @@ pub fn db_from_files(
                         id.start as i64,
                         id.stop as i64,
                         String::from(id.dir),
-                        left_landscape_ids.join("."),
-                        right_landscape_ids.join("."),
+                        left_landscape_ids.join(LANDSCAPE_DELIMITER),
+                        right_landscape_ids.join(LANDSCAPE_DELIMITER),
                     ],
                 )?;
             }
