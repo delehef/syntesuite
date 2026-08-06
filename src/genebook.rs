@@ -14,10 +14,6 @@ pub enum GeneBook {
         genes: HashMap<String, Gene>,
         species: Vec<String>,
     },
-    Cached {
-        genes: HashMap<String, Gene>,
-        species: Vec<String>,
-    },
     Inline {
         conn: Mutex<Connection>,
         window: usize,
@@ -36,6 +32,7 @@ impl std::fmt::Debug for TailGene {
     }
 }
 impl std::cmp::PartialEq for TailGene {
+    // NOTE: strand is deliberately ignored
     fn eq(&self, other: &Self) -> bool {
         self.family == other.family
     }
@@ -200,7 +197,7 @@ impl GeneBook {
             .query_map([], |row| row.get::<_, String>(0))?
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(GeneBook::Cached { genes, species })
+        Ok(GeneBook::InMemory { genes, species })
     }
 
     #[allow(dead_code)]
@@ -218,7 +215,7 @@ impl GeneBook {
 
     pub fn get(&self, g: &str) -> Result<Gene> {
         match self {
-            GeneBook::InMemory { genes, .. } | GeneBook::Cached { genes, .. } => genes
+            GeneBook::InMemory { genes, .. } => genes
                 .get(g)
                 .cloned()
                 .ok_or_else(|| errors::DataError::UnknownId(g.to_owned()).into()),
@@ -276,7 +273,7 @@ impl GeneBook {
 
     pub fn get_mut(&mut self, g: &str) -> Result<&mut Gene> {
         match self {
-            GeneBook::InMemory { genes, .. } | GeneBook::Cached { genes, .. } => genes
+            GeneBook::InMemory { genes, .. } => genes
                 .get_mut(g)
                 .ok_or_else(|| errors::DataError::UnknownId(g.to_owned()).into()),
             GeneBook::Inline { .. } => Err(errors::DataError::ImmutableBook.into()),
@@ -285,9 +282,7 @@ impl GeneBook {
 
     pub fn species(&self) -> Result<Vec<String>> {
         match self {
-            GeneBook::InMemory { species, .. } | GeneBook::Cached { species, .. } => {
-                Ok(species.to_owned())
-            }
+            GeneBook::InMemory { species, .. } => Ok(species.to_owned()),
             GeneBook::Inline {
                 conn: conn_mutex, ..
             } => {
