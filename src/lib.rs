@@ -150,8 +150,8 @@ impl Record {
     }
     fn strand(&self) -> Strand {
         match self {
-            Record::Gff(r) => r.strand().unwrap_or(Strand::Direct),
-            Record::Bed(r) => r.strand(),
+            Record::Gff(r) => r.strand().unwrap_or(Strand::Unknown),
+            Record::Bed(r) => r.strand().unwrap_or(Strand::Unknown),
             Record::Chrom(r) => r.strand(),
         }
     }

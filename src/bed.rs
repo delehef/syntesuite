@@ -42,8 +42,8 @@ impl BedRecord {
         self.end
     }
 
-    pub fn strand(&self) -> Strand {
-        self.strand.unwrap_or(Strand::Direct)
+    pub fn strand(&self) -> Option<Strand> {
+        self.strand
     }
 }
 

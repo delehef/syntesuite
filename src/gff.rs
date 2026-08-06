@@ -202,10 +202,11 @@ impl<T: Read> Iterator for GffReader<T> {
                     .next()
                     .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
                     .split(';')
-                    .map(|pair| {
-                        let (key, value) = pair
+                    .filter(|s| !s.is_empty())
+                    .map(|attrs| {
+                        let (key, value) = attrs
                             .split_once('=')
-                            .ok_or_else(|| GffError::IncorrectAttribute(pair.to_string()))?;
+                            .ok_or_else(|| GffError::IncorrectAttribute(attrs.to_string()))?;
                         Ok((
                             Key::from(key),
                             value.split(',').map(|x| x.to_string()).collect(),
