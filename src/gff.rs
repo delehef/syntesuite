@@ -11,8 +11,11 @@ pub enum GffError {
     #[error("GFF entry with missing fields: {0}")]
     RecordTooShort(String),
 
-    #[error("attribute entry contains more than one `=`: {0}")]
+    #[error("attribute entry missing `=`: {0}")]
     IncorrectAttribute(String),
+
+    #[error("invalid integer field: {0}")]
+    InvalidInteger(String),
 
     #[error("invalid score value: {0}")]
     InvalidScore(String),
@@ -24,7 +27,7 @@ pub enum GffError {
     InvalidPhase(String),
 
     #[error("IO error: {0}")]
-    IoError(std::io::Error),
+    IoError(#[source] std::io::Error),
 }
 
 /// A key to a GFF3 record attribute, as defined in http://gmod.org/wiki/GFF3
@@ -159,12 +162,12 @@ impl<T: Read> Iterator for GffReader<T> {
                     .next()
                     .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
                     .parse()
-                    .map_err(|_| GffError::RecordTooShort(line.to_owned()))?,
+                    .map_err(|_| GffError::InvalidInteger(line.to_owned()))?,
                 end: s
                     .next()
                     .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
                     .parse()
-                    .map_err(|_| GffError::RecordTooShort(line.to_owned()))?,
+                    .map_err(|_| GffError::InvalidInteger(line.to_owned()))?,
                 score: match s
                     .next()
                     .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
@@ -200,13 +203,12 @@ impl<T: Read> Iterator for GffReader<T> {
                     .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
                     .split(';')
                     .map(|pair| {
-                        let s = pair.split('=').collect::<Vec<_>>();
-                        if s.len() != 2 {
-                            return Err(GffError::IncorrectAttribute(pair.to_string()));
-                        }
+                        let (key, value) = pair
+                            .split_once('=')
+                            .ok_or_else(|| GffError::IncorrectAttribute(pair.to_string()))?;
                         Ok((
-                            Key::from(s[0]),
-                            s[1].split(',').map(|x| x.to_string()).collect(),
+                            Key::from(key),
+                            value.split(',').map(|x| x.to_string()).collect(),
                         ))
                     })
                     .collect::<Result<Attributes, GffError>>()?,
