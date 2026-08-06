@@ -205,7 +205,7 @@ fn parse_genome(
     {
         return Err(Error::MissingCaptureGroup {
             cap: "id".into(),
-            re: species_pattern.into(),
+            re: id_pattern.into(),
         }
         .into());
     }
@@ -256,7 +256,7 @@ fn parse_genome(
     }
 
     if let Some(genome) = genomes.get_mut(&species) {
-        for (_, ids) in genome.iter_mut() {
+        for ids in genome.values_mut() {
             ids.sort_by_key(|a| a.start);
         }
     } else {
@@ -285,14 +285,10 @@ pub fn db_from_files(
                 .with_context(|| anyhow!("while reading {}", name))?
                 .map(|e| {
                     e.map(|e| e.path().to_str().unwrap().to_owned())
-                        .map_err(|_| todo!())
+                        .map_err(|e| anyhow!(e))
                 })
             {
-                parse_family(
-                    f.unwrap().as_str(),
-                    &mut current_ancestral_id,
-                    &mut id2ancestral,
-                )?;
+                parse_family(f?.as_str(), &mut current_ancestral_id, &mut id2ancestral)?;
             }
         } else {
             parse_family(name, &mut current_ancestral_id, &mut id2ancestral)?;
@@ -309,11 +305,11 @@ pub fn db_from_files(
                 .with_context(|| anyhow!("while reading {}", name))?
                 .map(|e| {
                     e.map(|e| e.path().to_str().unwrap().to_owned())
-                        .map_err(|_| todo!())
+                        .map_err(|e| anyhow!(e))
                 })
             {
                 parse_genome(
-                    f.unwrap().as_str(),
+                    f?.as_str(),
                     species_pattern,
                     id_type,
                     id_pattern,
@@ -369,25 +365,20 @@ pub fn db_from_files(
                     .iter()
                     .map(|a| format!("{}{}", a.dir, a.ancestral_id))
                     .collect::<Vec<_>>();
-                let insert = format!(
-                    "INSERT INTO genomes (species, chr, ancestral_id, id, start, stop, direction, left_tail_ids, right_tail_ids) VALUES ('{}','{}','{}','{}','{}','{}','{}','{}','{}')",
-                    species,
-                    chr,
-                    id.ancestral_id,
-                    id.id,
-                    id.start,
-                    id.stop,
-                    String::from(id.dir),
-                    left_landscape_ids
-                        .into_iter()
-                        .collect::<Vec<_>>()
-                        .join("."),
-                    right_landscape_ids
-                        .into_iter()
-                        .collect::<Vec<_>>()
-                        .join("."),
-                );
-                tx.execute(&insert, [])?;
+                tx.execute(
+                    "INSERT INTO genomes (species, chr, ancestral_id, id, start, stop, direction, left_tail_ids, right_tail_ids) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
+                    rusqlite::params![
+                        species,
+                        chr,
+                        id.ancestral_id as i64,
+                        id.id,
+                        id.start as i64,
+                        id.stop as i64,
+                        String::from(id.dir),
+                        left_landscape_ids.join("."),
+                        right_landscape_ids.join("."),
+                    ],
+                )?;
             }
             tx.commit()?;
         }

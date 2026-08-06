@@ -180,7 +180,7 @@ impl GeneBook {
 
         let query = conn.prepare(&format!(
             "SELECT {id_column}, left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes WHERE {id_column} IN ({})",
-            std::iter::repeat("?").take(ids.len()).collect::<Vec<_>>().join(", ")
+            std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(", ")
         ))?;
         let genes = Self::get_rows(
             query,

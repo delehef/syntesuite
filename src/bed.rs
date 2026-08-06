@@ -75,7 +75,7 @@ impl<T: Read> Iterator for BedReader<T> {
                     .unwrap(),
                 id: s.next().map(|s| s.to_string()),
                 score: s.next().map(|x| x.parse().unwrap_or_default()),
-                strand: s.next().map(|x| x.try_into().unwrap()),
+                strand: s.next().and_then(|x| x.try_into().ok()),
             })
         }
 

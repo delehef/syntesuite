@@ -49,10 +49,11 @@ impl From<Phase> for usize {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
 pub enum Strand {
     Direct,
     Reverse,
+    #[default]
     Unknown,
 }
 impl Strand {
@@ -62,11 +63,6 @@ impl Strand {
             Strand::Reverse => *self = Strand::Direct,
             Strand::Unknown => {}
         }
-    }
-}
-impl std::default::Default for Strand {
-    fn default() -> Strand {
-        Strand::Unknown
     }
 }
 impl std::fmt::Display for Strand {
@@ -112,7 +108,7 @@ impl From<Strand> for String {
         match s {
             Strand::Direct => "+".into(),
             Strand::Reverse => "-".into(),
-            Strand::Unknown => "-".into(),
+            Strand::Unknown => ".".into(),
         }
     }
 }
