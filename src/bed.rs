@@ -8,6 +8,12 @@ use crate::Strand;
 pub enum BedError {
     #[error("BED entry with missing fields: {0}")]
     RecordTooShort(String),
+
+    #[error("invalid integer field: {0}")]
+    InvalidInteger(String),
+
+    #[error("IO error: {0}")]
+    IoError(std::io::Error),
 }
 
 #[derive(Debug)]
@@ -67,22 +73,24 @@ impl<T: Read> Iterator for BedReader<T> {
                     .next()
                     .ok_or_else(|| BedError::RecordTooShort(line.to_owned()))?
                     .parse()
-                    .unwrap(),
+                    .map_err(|_| BedError::InvalidInteger(line.to_owned()))?,
                 end: s
                     .next()
                     .ok_or_else(|| BedError::RecordTooShort(line.to_owned()))?
                     .parse()
-                    .unwrap(),
+                    .map_err(|_| BedError::InvalidInteger(line.to_owned()))?,
                 id: s.next().map(|s| s.to_string()),
                 score: s.next().map(|x| x.parse().unwrap_or_default()),
                 strand: s.next().and_then(|x| x.try_into().ok()),
             })
         }
 
-        self.buffer_lines
-            .by_ref()
-            .map(|l| l.unwrap())
-            .find(|line| !line.starts_with('#') && !line.is_empty())
-            .map(|l| make_record(&l))
+        loop {
+            match self.buffer_lines.next()? {
+                Err(e) => return Some(Err(BedError::IoError(e))),
+                Ok(line) if line.starts_with('#') || line.is_empty() => continue,
+                Ok(line) => return Some(make_record(&line)),
+            }
+        }
     }
 }

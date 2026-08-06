@@ -15,6 +15,10 @@ pub enum ChromError {
     RecordTooShort(String),
     #[error("Unrecognized strand format: {0}")]
     UnknownStrand(String),
+    #[error("invalid integer field: {0}")]
+    InvalidInteger(String),
+    #[error("IO error: {0}")]
+    IoError(std::io::Error),
 }
 
 #[derive(Debug)]
@@ -74,12 +78,12 @@ impl<T: Read> Iterator for ChromReader<T> {
                     .next()
                     .ok_or_else(|| ChromError::RecordTooShort(line.to_owned()))?
                     .parse()
-                    .unwrap(),
+                    .map_err(|_| ChromError::InvalidInteger(line.to_owned()))?,
                 end: s
                     .next()
                     .ok_or_else(|| ChromError::RecordTooShort(line.to_owned()))?
                     .parse()
-                    .unwrap(),
+                    .map_err(|_| ChromError::InvalidInteger(line.to_owned()))?,
                 strand: s
                     .next()
                     .ok_or_else(|| ChromError::RecordTooShort(line.to_owned()))?
@@ -92,10 +96,12 @@ impl<T: Read> Iterator for ChromReader<T> {
             })
         }
 
-        self.buffer_lines
-            .by_ref()
-            .map(|l| l.unwrap())
-            .find(|line| !line.starts_with('#') && !line.is_empty())
-            .map(|l| make_record(&l))
+        loop {
+            match self.buffer_lines.next()? {
+                Err(e) => return Some(Err(ChromError::IoError(e))),
+                Ok(line) if line.starts_with('#') || line.is_empty() => continue,
+                Ok(line) => return Some(make_record(&line)),
+            }
+        }
     }
 }

@@ -72,7 +72,7 @@ fn parse_genome_gff3(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, P
         source: e,
         filename: f.to_owned(),
     })?;
-    let gz = GzDecoder::new(BufReader::new(f.try_clone().unwrap()));
+    let gz = GzDecoder::new(BufReader::new(f.try_clone()?));
 
     Ok(match gz.header() {
         Some(_) => Box::new(
@@ -93,7 +93,7 @@ fn parse_genome_bed(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, Pa
         source: e,
         filename: f.to_owned(),
     })?;
-    let gz = GzDecoder::new(BufReader::new(f.try_clone().unwrap()));
+    let gz = GzDecoder::new(BufReader::new(f.try_clone()?));
 
     Ok(match gz.header() {
         Some(_) => Box::new(
@@ -114,7 +114,7 @@ fn parse_genome_chrom(f: &str) -> Result<Box<dyn Iterator<Item = Result<Record, 
         source: e,
         filename: f.to_owned(),
     })?;
-    let gz = GzDecoder::new(BufReader::new(f.try_clone().unwrap()));
+    let gz = GzDecoder::new(BufReader::new(f.try_clone()?));
 
     Ok(match gz.header() {
         Some(_) => Box::new(

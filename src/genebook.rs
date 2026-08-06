@@ -67,8 +67,8 @@ impl Gene {
 }
 
 impl GeneBook {
-    fn parse_landscape(landscape: &str) -> Vec<TailGene> {
-        fn parse_tailgene(g: &str) -> TailGene {
+    fn parse_landscape(landscape: &str) -> Result<Vec<TailGene>> {
+        fn parse_tailgene(g: &str) -> Result<TailGene> {
             let strand = g
                 .chars()
                 .next()
@@ -78,17 +78,17 @@ impl GeneBook {
                 .strip_prefix(['+', '-', '.'])
                 .unwrap_or(g)
                 .parse::<usize>()
-                .unwrap();
-            TailGene {
+                .with_context(|| format!("invalid family ID in landscape entry: {g:?}"))?;
+            Ok(TailGene {
                 family: family_id,
                 strand,
-            }
+            })
         }
 
         if landscape.is_empty() {
-            Vec::new()
+            Ok(Vec::new())
         } else {
-            landscape.split('.').map(parse_tailgene).collect::<Vec<_>>()
+            landscape.split('.').map(parse_tailgene).collect()
         }
     }
 
@@ -116,19 +116,24 @@ impl GeneBook {
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(genes
+        genes
             .into_iter()
             .map(|g| {
                 let id = g.0.to_string();
-                let mut left_landscape = Self::parse_landscape(&g.1);
+                let mut left_landscape = Self::parse_landscape(&g.1)?;
                 left_landscape.reverse();
                 left_landscape.truncate(window);
                 left_landscape.reverse();
 
-                let mut right_landscape = Self::parse_landscape(&g.2);
+                let mut right_landscape = Self::parse_landscape(&g.2)?;
                 right_landscape.truncate(window);
 
-                (
+                let strand =
+                    g.7.as_str()
+                        .try_into()
+                        .with_context(|| format!("invalid strand {:?} in database", g.7))?;
+
+                Ok((
                     g.0.clone(),
                     Gene {
                         id,
@@ -136,13 +141,13 @@ impl GeneBook {
                         family: g.3,
                         chr: g.5,
                         pos: g.6,
-                        strand: g.7.as_str().try_into().unwrap(),
+                        strand,
                         left_landscape,
                         right_landscape,
                     },
-                )
+                ))
             })
-            .collect())
+            .collect()
     }
 
     pub fn in_memory(filename: &str, window: usize, id_column: &str) -> Result<Self> {
@@ -223,43 +228,45 @@ impl GeneBook {
                 let mut query = conn.prepare(
                     &format!("SELECT left_tail_ids, right_tail_ids, ancestral_id, species, chr, start, direction FROM genomes WHERE {id_column}=?"),
                 )?;
-                query
+                let (left_str, right_str, ancestral_id, species, chr, pos, strand_str) = query
                     .query_row([g], |r| {
-                        let species = r.get::<_, String>(3)?;
-
-                        let mut left_landscape = Self::parse_landscape(&r.get::<_, String>(0)?);
-                        left_landscape.reverse();
-                        left_landscape.truncate(*window);
-                        left_landscape.reverse();
-
-                        let mut right_landscape = Self::parse_landscape(&r.get::<_, String>(1)?);
-                        right_landscape.truncate(*window);
-
-                        let strand = r
-                            .get::<_, String>(6)?
-                            .chars()
-                            .next()
-                            .and_then(|c| c.try_into().ok())
-                            .unwrap_or_default();
-
-                        rusqlite::Result::Ok(Gene {
-                            id: g.to_string(),
-                            species,
-                            family: r
-                                .get::<usize, i64>(2)?
-                                .try_into()
-                                .expect("SQLite integer should fit in usize"),
-                            chr: r.get::<_, String>(4)?,
-                            pos: r
-                                .get::<usize, i64>(5)?
-                                .try_into()
-                                .expect("SQLite integer should fit in usize"),
-                            strand,
-                            left_landscape,
-                            right_landscape,
-                        })
+                        rusqlite::Result::Ok((
+                            r.get::<_, String>(0)?,
+                            r.get::<_, String>(1)?,
+                            r.get::<_, i64>(2)?,
+                            r.get::<_, String>(3)?,
+                            r.get::<_, String>(4)?,
+                            r.get::<_, i64>(5)?,
+                            r.get::<_, String>(6)?,
+                        ))
                     })
-                    .with_context(|| "while accessing DB")
+                    .with_context(|| "while accessing DB")?;
+
+                let mut left_landscape = Self::parse_landscape(&left_str)?;
+                left_landscape.reverse();
+                left_landscape.truncate(*window);
+                left_landscape.reverse();
+
+                let mut right_landscape = Self::parse_landscape(&right_str)?;
+                right_landscape.truncate(*window);
+
+                let strand = strand_str
+                    .as_str()
+                    .try_into()
+                    .with_context(|| format!("invalid strand {strand_str:?} in database"))?;
+
+                Ok(Gene {
+                    id: g.to_string(),
+                    species,
+                    family: ancestral_id
+                        .try_into()
+                        .expect("SQLite integer should fit in usize"),
+                    chr,
+                    pos: pos.try_into().expect("SQLite integer should fit in usize"),
+                    strand,
+                    left_landscape,
+                    right_landscape,
+                })
             }
         }
     }
@@ -273,23 +280,21 @@ impl GeneBook {
         }
     }
 
-    pub fn species(&self) -> Vec<String> {
+    pub fn species(&self) -> Result<Vec<String>> {
         match self {
             GeneBook::InMemory { species, .. } | GeneBook::Cached { species, .. } => {
-                species.to_owned()
+                Ok(species.to_owned())
             }
             GeneBook::Inline {
                 conn: conn_mutex, ..
             } => {
                 let conn = conn_mutex.lock().expect("MUTEX POISONING");
-                let species = conn
-                    .prepare("SELECT DISTINCT species FROM genomes")
-                    .unwrap()
-                    .query_map([], |row| row.get::<_, String>(0))
-                    .unwrap()
-                    .collect::<Result<Vec<_>, _>>()
-                    .unwrap();
-                species
+                let result = conn
+                    .prepare("SELECT DISTINCT species FROM genomes")?
+                    .query_map([], |row| row.get::<_, String>(0))?
+                    .collect::<std::result::Result<Vec<_>, _>>()
+                    .map_err(Into::into);
+                result
             }
         }
     }

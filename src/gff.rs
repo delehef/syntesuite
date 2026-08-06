@@ -13,6 +13,18 @@ pub enum GffError {
 
     #[error("attribute entry contains more than one `=`: {0}")]
     IncorrectAttribute(String),
+
+    #[error("invalid score value: {0}")]
+    InvalidScore(String),
+
+    #[error("invalid strand value: {0}")]
+    InvalidStrand(String),
+
+    #[error("invalid phase value: {0}")]
+    InvalidPhase(String),
+
+    #[error("IO error: {0}")]
+    IoError(std::io::Error),
 }
 
 /// A key to a GFF3 record attribute, as defined in http://gmod.org/wiki/GFF3
@@ -153,36 +165,36 @@ impl<T: Read> Iterator for GffReader<T> {
                     .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
                     .parse()
                     .map_err(|_| GffError::RecordTooShort(line.to_owned()))?,
-                score: s
+                score: match s
                     .next()
-                    .map(|x| {
-                        if x == "." {
-                            None
-                        } else {
-                            Some(x.parse().unwrap())
-                        }
-                    })
-                    .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?,
-                strand: s
+                    .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
+                {
+                    "." => None,
+                    x => Some(
+                        x.parse()
+                            .map_err(|_| GffError::InvalidScore(x.to_string()))?,
+                    ),
+                },
+                strand: match s
                     .next()
-                    .map(|x| {
-                        if x == "." {
-                            None
-                        } else {
-                            Some(x.try_into().unwrap())
-                        }
-                    })
-                    .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?,
-                phase: s
+                    .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
+                {
+                    "." => None,
+                    x => Some(
+                        x.try_into()
+                            .map_err(|_| GffError::InvalidStrand(x.to_string()))?,
+                    ),
+                },
+                phase: match s
                     .next()
-                    .map(|x| {
-                        if x == "." {
-                            None
-                        } else {
-                            Some(x.try_into().unwrap())
-                        }
-                    }) // TODO remove the unwrap
-                    .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?,
+                    .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
+                {
+                    "." => None,
+                    x => Some(
+                        x.try_into()
+                            .map_err(|_| GffError::InvalidPhase(x.to_string()))?,
+                    ),
+                },
                 attributes: s
                     .next()
                     .ok_or_else(|| GffError::RecordTooShort(line.to_owned()))?
@@ -201,10 +213,12 @@ impl<T: Read> Iterator for GffReader<T> {
             })
         }
 
-        self.buffer_lines
-            .by_ref()
-            .map(|l| l.unwrap())
-            .find(|line| !line.starts_with('#') && !line.is_empty())
-            .map(|l| make_record(&l))
+        loop {
+            match self.buffer_lines.next()? {
+                Err(e) => return Some(Err(GffError::IoError(e))),
+                Ok(line) if line.starts_with('#') || line.is_empty() => continue,
+                Ok(line) => return Some(make_record(&line)),
+            }
+        }
     }
 }
