@@ -13,7 +13,7 @@ pub enum BedError {
     InvalidInteger(String),
 
     #[error("IO error: {0}")]
-    IoError(std::io::Error),
+    IoError(#[source] std::io::Error),
 }
 
 #[derive(Debug)]

@@ -18,7 +18,7 @@ pub enum ChromError {
     #[error("invalid integer field: {0}")]
     InvalidInteger(String),
     #[error("IO error: {0}")]
-    IoError(std::io::Error),
+    IoError(#[source] std::io::Error),
 }
 
 #[derive(Debug)]
