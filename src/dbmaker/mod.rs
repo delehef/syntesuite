@@ -2,7 +2,7 @@ use anyhow::*;
 use colored::Colorize;
 use flate2::bufread::GzDecoder;
 use log::*;
-use regex::Regex;
+use regex_lite::Regex;
 use rusqlite::Connection;
 use std::{
     collections::{HashMap, HashSet},
@@ -20,7 +20,10 @@ use crate::{
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("{} is not a valid regex", .re.yellow().bold())]
-    InvalidRegex { source: regex::Error, re: String },
+    InvalidRegex {
+        source: regex_lite::Error,
+        re: String,
+    },
 
     #[error("capture group {} missing in {}", .cap.yellow().bold(), .re.blue().bold())]
     MissingCaptureGroup { cap: String, re: String },

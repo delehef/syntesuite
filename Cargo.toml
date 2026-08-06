@@ -12,13 +12,13 @@ readme = "CHANGELOG.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0"
-colored = "2.0"
-flate2 = "1.0"
+anyhow = "1"
+colored = "3"
+flate2 = "1"
 log = "0.4"
-regex = "1.6"
-rusqlite = "~0.31" # don't update carelessly me for Guix
-thiserror = "1.0"
+regex-lite = "0.1"
+rusqlite = "0.40"
+thiserror = "2"
 
 [package.metadata.release]
 tag-prefix = ""

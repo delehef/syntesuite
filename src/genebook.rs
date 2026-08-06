@@ -103,10 +103,14 @@ impl GeneBook {
                     r.get::<_, String>(0)?, // id
                     r.get::<_, String>(1)?, // left tail
                     r.get::<_, String>(2)?, // right tail
-                    r.get::<_, usize>(3)?,  // ancestral id
+                    r.get::<_, i64>(3)?
+                        .try_into()
+                        .expect("SQLite integer should fit in usize"), // ancestral id
                     r.get::<_, String>(4)?, // species
                     r.get::<_, String>(5)?, // chr
-                    r.get::<_, usize>(6)?,  // position
+                    r.get::<_, i64>(6)?
+                        .try_into()
+                        .expect("SQLite integer should fit in usize"), // position
                     r.get::<_, String>(7)?, // direction
                 ))
             })?
@@ -241,9 +245,15 @@ impl GeneBook {
                         rusqlite::Result::Ok(Gene {
                             id: g.to_string(),
                             species,
-                            family: r.get::<usize, _>(2)?,
+                            family: r
+                                .get::<usize, i64>(2)?
+                                .try_into()
+                                .expect("SQLite integer should fit in usize"),
                             chr: r.get::<_, String>(4)?,
-                            pos: r.get::<usize, _>(5)?,
+                            pos: r
+                                .get::<usize, i64>(5)?
+                                .try_into()
+                                .expect("SQLite integer should fit in usize"),
                             strand,
                             left_landscape,
                             right_landscape,
