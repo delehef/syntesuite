@@ -334,9 +334,12 @@ pub fn db_from_files(
         source: e,
         filename: db_file.into(),
     })?;
-    conn.execute("DROP TABLE IF EXISTS genomes;", [])
+    conn.execute("pragma temp_store = memory;", [])
+        .with_context(|| "while setting temp_store")?;
+    let tx = conn.transaction()?;
+    tx.execute("DROP TABLE IF EXISTS genomes;", [])
         .with_context(|| "while dropping table")?;
-    conn.execute(
+    tx.execute(
         "CREATE TABLE genomes (
             species text, chr text, ancestral_id integer, id text,
             start integer, stop integer, direction char,
@@ -346,13 +349,10 @@ pub fn db_from_files(
     )
     .with_context(|| "while creating database")?;
     info!("Filling database...");
-    conn.execute("pragma temp_store = memory;", [])
-        .with_context(|| "while setting temp_store")?;
     for (species, genome) in genomes.iter() {
         debug!("Inserting {}", species.bold());
         for (chr, ids) in genome.iter() {
             trace!("Inserting {}", chr.bold());
-            let tx = conn.transaction()?;
             for (j, id) in ids.iter().enumerate() {
                 let j = j as isize;
                 let i = (0.max(j - window)) as usize;
@@ -380,18 +380,18 @@ pub fn db_from_files(
                     ],
                 )?;
             }
-            tx.commit()?;
         }
     }
 
     info!("Creating DB indices...");
-    conn.execute_batch(
+    tx.execute_batch(
         "CREATE INDEX genomes_species ON genomes(species);
          CREATE INDEX genomes_chr     ON genomes(chr);
          CREATE INDEX genomes_id      ON genomes(id);
          CREATE INDEX genomes_start   ON genomes(start);",
     )
     .with_context(|| "while creating indices")?;
+    tx.commit()?;
 
     Ok(())
 }
