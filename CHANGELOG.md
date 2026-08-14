@@ -1,13 +1,12 @@
+## [0.8.0] - 2026-08-14
+
+### 🚜 Refactor
+
+- Strongly type family IDs
 ## [0.7.0] - 2026-08-06
-
-### 🚀 Features
-
-- Add ChromTable files parsing
 
 ### 🐛 Bug Fixes
 
-- ChromTable field order
-- Strands may be encoded as 1/-1
 - Collision between strand indicator and landscape delimiter
 - GFF attributes parsing may contain '='
 - Correctly wrap IO errors
@@ -24,14 +23,43 @@
 
 ### ⚙️ Miscellaneous Tasks
 
-- Update rusqlite
-- Release syntesuite version 0.5.0
-- Release syntesuite version 0.6.0
-- Release syntesuite version 0.6.1
-- Release syntesuite version 0.6.2
 - Convert to devenv
 - Update dependencies
 - Clippy
+- Release syntesuite version 0.7.0
+## [0.6.2] - 2024-08-05
+
+### 🐛 Bug Fixes
+
+- Strands may be encoded as 1/-1
+
+### ⚙️ Miscellaneous Tasks
+
+- Release syntesuite version 0.6.2
+## [0.6.1] - 2024-07-30
+
+### 🐛 Bug Fixes
+
+- ChromTable field order
+
+### ⚙️ Miscellaneous Tasks
+
+- Release syntesuite version 0.6.1
+## [0.6.0] - 2024-07-30
+
+### 🚀 Features
+
+- Add ChromTable files parsing
+
+### ⚙️ Miscellaneous Tasks
+
+- Release syntesuite version 0.6.0
+## [0.5.0] - 2024-07-21
+
+### ⚙️ Miscellaneous Tasks
+
+- Update rusqlite
+- Release syntesuite version 0.5.0
 ## [0.4.0] - 2023-08-05
 
 ### 🚀 Features
