@@ -1,12 +1,23 @@
 use anyhow::*;
+use derive_more::{Deref, Display, From, Into};
 use log::*;
 use rusqlite::Connection;
 use std::collections::HashMap;
+use std::num::TryFromIntError;
 use std::sync::Mutex;
 
 use crate::{dbmaker::LANDSCAPE_DELIMITER, errors, Strand};
 
-pub type FamilyID = usize;
+#[derive(Default, Clone, Copy, From, Into, Deref, Display, PartialEq, Eq, Hash)]
+#[display("{}", self.0)]
+pub struct FamilyId(usize);
+impl TryFrom<i64> for FamilyId {
+    type Error = TryFromIntError;
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        usize::try_from(value).map(FamilyId)
+    }
+}
 
 #[allow(dead_code)]
 pub enum GeneBook {
@@ -23,7 +34,7 @@ pub enum GeneBook {
 
 #[derive(Clone, Copy)]
 pub struct TailGene {
-    pub family: FamilyID,
+    pub family: FamilyId,
     pub strand: Strand,
 }
 impl std::fmt::Debug for TailGene {
@@ -43,7 +54,7 @@ impl std::cmp::Eq for TailGene {}
 pub struct Gene {
     pub id: String,
     pub species: String,
-    pub family: FamilyID,
+    pub family: FamilyId,
     pub chr: String,
     pub pos: usize,
     pub strand: Strand,
@@ -77,7 +88,7 @@ impl GeneBook {
                 .parse::<usize>()
                 .with_context(|| format!("invalid family ID in landscape entry: {g:?}"))?;
             Ok(TailGene {
-                family: family_id,
+                family: family_id.into(),
                 strand,
             })
         }

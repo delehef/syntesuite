@@ -14,6 +14,7 @@ readme = "CHANGELOG.md"
 [dependencies]
 anyhow = "1"
 colored = "3"
+derive_more = { version = "2.1.1", features = ["from", "into", "deref", "debug", "display", "try_from"] }
 flate2 = "1"
 log = "0.4"
 regex-lite = "0.1"
